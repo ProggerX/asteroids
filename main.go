@@ -59,7 +59,7 @@ func playerLoop(pl *entities.Entity, _ event.EnterPayload) event.Response {
 }
 
 func asteroidLoop(ast *entities.Entity, _ event.EnterPayload) event.Response {
-	ast.Delta[1] = float64(2 * (diff + 150) / 150)
+	ast.Delta[1] = float64(1.2 * float64((diff + 150) / 150))
 	if collision.HitLabel(ast.Space, Bullet) != nil {
 		go func() {
 			spawn := floatgeom.Point2{float64(random.Intn(600)), float64(random.Intn(50) - 150)}
