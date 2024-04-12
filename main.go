@@ -2,14 +2,18 @@ package main
 
 import (
 	oak "github.com/oakmound/oak/v4"
+	"os"
 	"github.com/oakmound/oak/v4/event"
+	"strconv"
 	random "math/rand"
 	"github.com/oakmound/oak/v4/entities"
+	"github.com/oakmound/oak/v4/render"
 	"github.com/oakmound/oak/v4/scene"
 	"github.com/oakmound/oak/v4/alg/floatgeom"
 	"github.com/oakmound/oak/v4/key"
 	"github.com/oakmound/oak/v4/collision"
 	"image/color"
+	"image"
 	"time"
 )
 
@@ -40,25 +44,43 @@ func bulletLoop(bul *entities.Entity, _ event.EnterPayload) event.Response {
 	return 0
 }
 
-var score int = 0
+var score string = "0"
+var lives string = "3"
+var diff int = 1
 
 func playerLoop(pl *entities.Entity, _ event.EnterPayload) event.Response {
 	if oak.IsDown(key.D) {
-		pl.ShiftPos(4, 0)
+		pl.ShiftPos(float64(4 * ((diff + 150) / 150)), 0)
 	}
 	if oak.IsDown(key.A) {
-		pl.ShiftPos(-4, 0)
+		pl.ShiftPos(-float64(4 * ((diff + 150) / 150)), 0)
 	}
 	return 0
 }
 
 func asteroidLoop(ast *entities.Entity, _ event.EnterPayload) event.Response {
-	if collision.HitLabel(ast.Space, Bullet) != nil || ast.Y() > 500 {
+	ast.Delta[1] = float64(2 * (diff + 150) / 150)
+	if collision.HitLabel(ast.Space, Bullet) != nil {
 		go func() {
 			spawn := floatgeom.Point2{float64(random.Intn(550)), float64(random.Intn(50) - 150)}
 			time.Sleep(time.Millisecond * 20);
 			ast.SetPos(spawn)
-			score += 10
+			int_score, _ := strconv.Atoi(score)
+			int_score += 5 * (diff + 50) / 50
+			score = strconv.Itoa(int_score)
+			diff++
+		}()
+	}
+	if ast.Y() > 500 {
+		go func() {
+			spawn := floatgeom.Point2{float64(random.Intn(550)), float64(random.Intn(50) - 150)}
+			ast.SetPos(spawn)
+			int_lives, _ := strconv.Atoi(lives)
+			int_lives--
+			lives = strconv.Itoa(int_lives)
+			if int_lives < 0 {
+				os.Exit(228)
+			}
 		}()
 	}
 	ast.ShiftDelta()
@@ -66,8 +88,17 @@ func asteroidLoop(ast *entities.Entity, _ event.EnterPayload) event.Response {
 	return 0
 }
 
+func getImageFromFilePath(filePath string) image.Image {
+    f, _ := os.Open(filePath)
+    defer f.Close()
+    image, _, _ := image.Decode(f)
+    return image
+}
+
 func startScene(ctx *scene.Context) {
 	globalCtx = ctx
+	ctx.Draw(render.NewStrPtrText(&score, 10, 10))
+	ctx.Draw(render.NewStrPtrText(&lives, 10, 25))
 	player := entities.New(ctx, entities.WithColor(color.White), entities.WithRect(floatgeom.NewRect2WH(0, 0, 20, 20)), entities.WithPosition(floatgeom.Point2{250, 460}))
 	event.Bind(ctx, event.Enter, player, playerLoop)
 	event.Bind(ctx, key.Down(key.Spacebar), player, shoot)
